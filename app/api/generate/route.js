@@ -1,17 +1,26 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+import { NextResponse } from "next/server";
+import OpenAI from "openai";
 
-// Access your API key as an environment variable (see "Set up your API key" above)
-const genAI = new GoogleGenerativeAI(process.env.API_KEY);
+const systemPrompt = 'Im gonna ask you things, respond with words on the front and description on the back, return your response in the following json format {"flashcards"{"front": str, "back": str}} ONLY GENERATE 10 FLASHCARDS ABOUT YOUR DAY'
 
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
+export async function POST(req) {
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+  })
+  const data = await req.text()
 
-async function run() {
-  const prompt = "how does next response work when importing NextReponse from next/server"
+  const completion = await openai.chat.completions.create({
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: data },
+    ],
+    model: 'gpt-4o',
+    response_format: {type: 'json_object'},
+  })
 
-  const result = await model.generateContent(prompt);
-  const response = await result.response;
-  const text = response.text();
-  return(text);
+  console.log(completion.choices[0].message.content)
+
+  const flashcards = JSON.parse(completion.choices[0].message.content)
+
+  return NextResponse.json(flashcards.flashcards)
 }
-
-export default run();

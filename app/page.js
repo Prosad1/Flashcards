@@ -1,16 +1,57 @@
 'use client'
-import run from './api/generate/route.js'
 import getStripe from './utils/get-stripe.js';
 import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
 import Head from 'next/head'
 import { Container, AppBar, Typography, Button, Toolbar, Box, Grid} from '@mui/material'
+//analytics import
+import { useEffect } from 'react';
+import { analytics } from '@/firebase';
+import { usePathname } from 'next/navigation';
+import { logEvent } from "firebase/analytics";
+
 
 export default function Home() {
+  //analytics
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (analytics) {
+      console.log('Firebase Analytics initialized successfully');
+
+      // Log the page view
+      logEvent(analytics, 'page_view', {
+        page_path: pathname, // Current page path
+      });
+    }
+  }, [pathname]); // Run effect when pathname changes
+
+  //before this is analytics
+  const handleSubmit = async() =>{
+    const checkoutSession = await fetch('/api/checkout_session', {
+      method: 'POST',
+      headers:{
+        origin: 'https://localhost:3000',
+      },
+  })
 
 
-  let text = run;
+  const checkoutSessionJson = await checkoutSession.json()
+ 
+  if(checkoutSession.statusCode === 500){
+    console.error(checkoutSession.message)
+    return
+  }
 
-  
+  const stripe = await getStripe()
+  const {error} = await stripe.redirectToCheckout({
+    sessionId: checkoutSessionJson.id,
+  })
+
+  if (error){
+    console.warn(error.message)
+  }
+  }
+
   return(
     <Container maxWidth="auto">
       <Head>
@@ -20,7 +61,7 @@ export default function Home() {
 
       <AppBar position="Static">
         <Toolbar>
-          <Typography variant ="h6" style={{flexGrow:1}}>Flashcard  SaaS</Typography>
+          <Typography variant ="h6" style={{flexGrow:1}}>Smart Cards</Typography>
           <SignedOut>
             <Button color="inherit" href="/sign-in">Login</Button>
             <Button color="inherit" href="/sign-up">Sign Up</Button>
@@ -32,13 +73,13 @@ export default function Home() {
 
 
       </AppBar>
-      <Box>
-        <Typography variant="h2"> Welcome to FLashcard Saas</Typography>
+      <Box sx = {{mt:2, display:'flex', flexDirection:'column', alignItems:'center'}}>
+        <Typography variant="h2"> Welcome to Smart Cards</Typography>
         <Typography variant ="h5">
           {' '}
           The easiest way to make flashcards from your text
         </Typography>
-        <Button variant="contained" color='primary' sx = {{mt:2}}>Get Started</Button>
+        <Button variant="contained" color='primary' sx = {{mt:2, display:'flex', flexDirection:'column', alignItems:'center'}} href="/generate"   >Get Started</Button>
       </Box>
       <Box>
         <Typography>
@@ -75,7 +116,7 @@ export default function Home() {
             <Typography variant ="h5" gutterBottom>Pro</Typography>
             <Typography variant="h6" gutterBottom>10$ / month</Typography>
             <Typography>{''} Unlimited flashcards and storage, with priority suppport</Typography>
-            <Button variant="contained" color="primary" sx={{mt: 2}}> Choose Pro</Button>
+            <Button variant="contained" color="primary" sx={{mt: 2}} onClick={handleSubmit}> Choose Pro</Button>
             </Box>
           </Grid>
         </Grid>

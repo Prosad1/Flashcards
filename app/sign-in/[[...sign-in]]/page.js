@@ -1,3 +1,4 @@
+'use-client'
 import { Container, AppBar, Typography, Button, Toolbar, Box, Grid} from '@mui/material'
 import Link from 'next/link'
 import { SignIn } from '@clerk/nextjs'
